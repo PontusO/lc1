@@ -9,21 +9,22 @@
 #include <termios.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <string.h>
 #include <errno.h>
 #include <glib.h>
 
-#include "serial.h"
+#include "lc1.h"
 
 static char *device = "/dev/ttyUSB0";
 
 int main(int argc, char *argv[])
 {
-    char chr;
-    int c, fd;
+    int c;
     int errflg;
     extern char *optarg;
     extern int optind, optopt;
+    int childstat;
 
     while ((c = getopt(argc, argv, "d:")) != -1)
     {
@@ -38,16 +39,14 @@ int main(int argc, char *argv[])
                 errflg++;
         }
     }
-    printf ("Using serial device %s\n", device);
-    fd = serial_create (device);
-    if (fd < 0)
-        exit (1);
 
-    while (1) {
-        if (read(fd, &chr, 1) == 1) {
-            printf("Value: 0x%02x", chr);
-            if ((chr & 0xa2) == 0xa2) printf(" Sync");
-            printf("\n");
-        }
+    if (!create_lc1_listener (device)) {
+        printf ("Could not create a LC-1 listener so I need to terminate !\n");
+        exit (1);
     }
+
+    wait (&childstat);
+    printf ("Parent process terminating !\n");
+
+    return 0;
 }
