@@ -12,7 +12,7 @@ SOURCES    = serial.c main.c
 OBJECTS    = $(SOURCES:.c=.o)
 
 # Name of executable target:
-EXECUTABLE = lc1
+EXECUTABLE = pelletctrld
 
 # Make sure dbus is online
 CFLAGS  += $(shell pkg-config --cflags glib-2.0)
