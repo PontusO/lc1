@@ -2,61 +2,52 @@
  * The main file of the pellet burner control program
  */
 
-#include "lc1.h"
-#include <libintl.h>
-#include <locale.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
-
+#include <unistd.h>
+#include <termios.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <string.h>
+#include <errno.h>
 #include <glib.h>
 
-#define GETTEXT_PACKAGE "myapp"
+#include "serial.h"
 
-static gchar *device = "/dev/ttyUSB0";
+static char *device = "/dev/ttyUSB0";
 
-static GOptionEntry entries[] =
+int main(int argc, char *argv[])
 {
-  { "device", 'd', 0, G_OPTION_ARG_STRING, device, "Device name", "N" },
-  { NULL }
-};
-
-int main (int argc, char *argv[])
-{
-    char *portname = "/dev/ttyUSB0";
     char chr;
+    int c, fd;
+    int errflg;
+    extern char *optarg;
+    extern int optind, optopt;
 
-    GError *error = NULL;
-    GOptionContext *context;
-
-    setlocale (LC_ALL, "");
-    bindtextdomain ("hello", "/usr/share/locale");
-    textdomain ("hello");
-
-    context = g_option_context_new ("- Pellet burner control system");
-    g_option_context_add_main_entries (context, entries, GETTEXT_PACKAGE);
-//    g_option_context_add_group (context, gtk_get_option_group (TRUE));
-    if (!g_option_context_parse (context, &argc, &argv, &error))
+    while ((c = getopt(argc, argv, "d:")) != -1)
     {
-        g_print ("option parsing failed: %s\n", error->message);
-        exit (1);
+        switch (c) {
+            case 'd':
+                printf ("Device: '%s', length %d\n", optarg, strlen(optarg));
+                device = (char *)calloc (1, strlen(optarg)+1);
+                strncpy (device, optarg, strlen(optarg));
+                break;
+            case '?':
+                fprintf(stderr, "Unrecognized option: -%c\n", optopt);
+                errflg++;
+        }
     }
-
-    int fd = open (portname, O_RDWR | O_NOCTTY | O_SYNC);
+    printf ("Using serial device %s\n", device);
+    fd = serial_create (device);
     if (fd < 0)
-    {
-            printf ("error %d opening %s: %s", errno, portname, strerror (errno));
-            return 0;
-    }
+        exit (1);
 
-    set_interface_attribs (fd, B19200, 0);  // set speed to 115,200 bps, 8n1 (no parity)
-    set_blocking (fd, 0);                   // set no blocking
-
-    while (1)
-    {
-        if (read (fd, &chr, 1) == 1) {
-            printf ("Value: 0x%02x", chr);
-            if ((chr & 0xa2) == 0xa2) printf (" Sync");
-            printf ("\n");
+    while (1) {
+        if (read(fd, &chr, 1) == 1) {
+            printf("Value: 0x%02x", chr);
+            if ((chr & 0xa2) == 0xa2) printf(" Sync");
+            printf("\n");
         }
     }
 }
