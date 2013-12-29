@@ -8,7 +8,7 @@ CFLAGS     = -c -Wall
 LDFLAGS    =
 
 # List of sources:
-SOURCES    = lc1.c serial.c main.c
+SOURCES    = lc1.c serial.c main.c tpl.c
 OBJECTS    = $(SOURCES:.c=.o)
 
 # Name of executable target:
