@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
     if (!create_lc1_listener (device, lc1pipe)) {
         printf ("Could not create a LC-1 listener so I need to terminate !\n");
         close (lc1pipe[0]);
-        close (lc1pipe[2]);
+        close (lc1pipe[1]);
         exit (1);
     }
 
