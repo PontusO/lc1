@@ -61,18 +61,22 @@ int main(int argc, char *argv[])
     while (1) {
         tpl_node *tn;
 
-        tn = tpl_map("S(vvj)", &lambda_ipc);
+        tn = tpl_map(LAMBDA_IPC_PACK, &lambda_ipc);
         tpl_load(tn, TPL_FD, lc1pipe[0]);
         tpl_unpack(tn, 0);
         tpl_free(tn);
 
         switch (lambda_ipc.func) {
             case 0:
-                printf ("Lambda value: %d.%d\n", lambda_ipc.lambda / 100, lambda_ipc.lambda - ((lambda_ipc.lambda / 100) * 100));
+                printf ("Lambda: %d.%d, AFR: %d.%d, Stoich: %d\n",
+                        lambda_ipc.lambda / 100, lambda_ipc.lambda - ((lambda_ipc.lambda / 100) * 100),
+                        lambda_ipc.afr / 100, lambda_ipc.afr - ((lambda_ipc.afr / 100) * 100), get_afr());
                 break;
 
             case 1:
-                printf ("Lambda value: %d.%d\%\n", lambda_ipc.lambda / 100, lambda_ipc.lambda - ((lambda_ipc.lambda / 100) * 100));
+                printf ("Lambda: %d.%d%c AFR: %d.%d%c, Stoich: %d\n",
+                        lambda_ipc.lambda / 100, lambda_ipc.lambda - ((lambda_ipc.lambda / 100) * 100), '%',
+                        lambda_ipc.afr / 100, lambda_ipc.afr - ((lambda_ipc.afr / 100) * 100), '%', get_afr());
                 break;
 
             default:

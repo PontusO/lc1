@@ -57,12 +57,15 @@ enum {
     BURNER_STATE_STOPPED
 };
 
+#define LAMBDA_IPC_PACK     "S(vvjj)"
 typedef struct {
     uint16_t sync_word;
     uint16_t func;
     int16_t lambda;
+    int16_t afr;
 } lambda_ipc_t;
 
 pid_t create_lc1_listener (char *device, int *pipe);
+int get_afr(void);
 
 #endif /* LC1_H_ */

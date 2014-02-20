@@ -26,6 +26,10 @@ static lambda_ipc_t lambda_ipc =  {
         .sync_word = 0xfade
 };
 
+static int latest_afr;
+
+pthread_mutex_t lock;
+
 static uint8_t read_chr(int fd)
 {
     uint8_t c;
@@ -65,6 +69,22 @@ static int process_frame(int fd)
 }
 
 /*
+ * A simple getter for the AFR value.
+ * Will always ? be called from another thread (process)
+ */
+int get_afr()
+{
+    int ret;
+    printf ("-%d-\n", latest_afr);
+
+    pthread_mutex_lock(&lock);
+    ret = latest_afr;
+    pthread_mutex_unlock(&lock);
+
+    return ret;
+}
+
+/*
  * Creates a LC-1 listener.
  */
 pid_t create_lc1_listener (char *device, int *pipe)
@@ -76,8 +96,17 @@ pid_t create_lc1_listener (char *device, int *pipe)
     int func2, afr;
     int int_lambda;
     float lambda;
+    float afr_r;
     int state = ISP2_STATE_NO_STATE;
     int burner_state = BURNER_STATE_UNKNOWN;
+
+    if (pthread_mutex_init(&lock, NULL) != 0)
+    {
+        printf("Mutex init failed\n");
+        errno = -1;
+        return 0;
+    }
+
 
     errno = 0;
     lc1_PID = fork();
@@ -111,13 +140,20 @@ pid_t create_lc1_listener (char *device, int *pipe)
                     afr = (status_word & ISP2_AFR_MUL_MASK) |
                             ((status_word & ISP2_AFR_MUL_BIT7_MASK) >> ISP2_AFR_MUL_BIT7_SHIFT_STEPS);
 
+                    pthread_mutex_lock(&lock);
+                    latest_afr = afr;
+                    pthread_mutex_unlock(&lock);
+
                     /* And finally unpack the lambda word */
                     int_lambda = (raw_lambda & ISP2_LAMBDA_MASK) |
                             ((raw_lambda & ISP2_LAMBDA_TOP_MASK) >> ISP2_LAMBDA_TOP_SHIFT_STEPS);
 
                     switch (func2) {
                         case 0:
-                            lambda = ((float)int_lambda + 500) * ((float)afr / 10) / 10000;
+                            // Pure lambda value
+                            lambda = ((float)int_lambda + 500) / 1000;
+                            // AFR converted value
+                            afr_r = ((float)int_lambda + 500) * ((float)afr / 10) / 10000;
                             lambda_ipc.func = state = ISP2_STATE_LAMBDA;
                             break;
 
@@ -139,7 +175,8 @@ pid_t create_lc1_listener (char *device, int *pipe)
                     lambda_ipc.func = func2;
                     // Send lambda as int16 with two digits precision
                     lambda_ipc.lambda = (int16_t)(lambda *100);
-                    tn = tpl_map("S(vvj)", &lambda_ipc);
+                    lambda_ipc.afr = (int16_t)(afr_r * 100);
+                    tn = tpl_map(LAMBDA_IPC_PACK, &lambda_ipc);
                     tpl_pack(tn, 0);
                     tpl_dump(tn, TPL_FD, pipe[1]);
                     tpl_free(tn);
@@ -148,6 +185,7 @@ pid_t create_lc1_listener (char *device, int *pipe)
             close(fd);
             fflush(stdout);
             _exit(0);
+            pthread_mutex_destroy(&lock);
         } else {
             /* Parent process returns with the PID of the new child process */
             return lc1_PID;

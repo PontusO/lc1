@@ -70,7 +70,7 @@ void set_blocking (int fd, int should_block)
  */
 int serial_create (char *device)
 {
-    int fd = open(device, O_RDWR | O_NOCTTY | O_SYNC);
+    int fd = open(device, O_RDWR | O_NOCTTY | O_SYNC | O_NDELAY);
     if (fd < 0) {
         printf("error %d opening '%s', %s\n", errno, device, strerror(errno));
         goto exit;
